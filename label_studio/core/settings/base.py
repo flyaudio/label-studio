@@ -206,6 +206,7 @@ DATABASES_ALL = {
 }
 DATABASES_ALL['default'] = DATABASES_ALL[DJANGO_DB_POSTGRESQL]
 DATABASES = {'default': DATABASES_ALL.get(get_env('DJANGO_DB', 'default'))}
+print("\t DATABASES=", DATABASES)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
@@ -228,13 +229,16 @@ if get_bool_env('GOOGLE_LOGGING_ENABLED', False):
         logger.exception('Google Cloud Logging handler could not be setup.')
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.humanize',
+    # Django 内置应用
+    'django.contrib.admin',         # 管理界面
+    'django.contrib.auth',          # 认证系统
+    'django.contrib.contenttypes',  # 内容类型框架
+    'django.contrib.sessions',      # 会话管理（记住登录状态）
+    'django.contrib.messages',      # 消息框架
+    'django.contrib.staticfiles',   # 静态文件管理
+    'django.contrib.humanize',      # 人性化显示（数字加千分位、日期"3分钟前"等）
+    
+    # 第三方库
     'drf_spectacular',
     'corsheaders',
     'django_extensions',
@@ -242,11 +246,13 @@ INSTALLED_APPS = [
     'django_filters',
     'rules',
     'annoying',
-    'rest_framework',
+    'rest_framework',               # Django REST Framework
     'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
     'drf_generators',
     'fsm',  # MUST be before apps that register FSM transitions (projects, tasks)
+
+    #自定义业务
     'core',
     'users',
     'organizations',
@@ -340,7 +346,7 @@ AUTHENTICATION_BACKENDS = [
     'rules.permissions.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
-USE_USERNAME_FOR_LOGIN = False
+USE_USERNAME_FOR_LOGIN = True
 
 DISABLE_SIGNUP_WITHOUT_LINK = get_bool_env('DISABLE_SIGNUP_WITHOUT_LINK', False)
 # Organization invite links stop working this many days after they are issued or reset; 0 disables expiration
@@ -751,7 +757,7 @@ DATA_UNDEFINED_NAME = '$undefined$'
 LICENSE = {}
 VERSIONS = {}
 VERSION_EDITION = 'Community'
-LATEST_VERSION_CHECK = get_bool_env('LATEST_VERSION_CHECK', True)
+LATEST_VERSION_CHECK = False   # get_bool_env('LATEST_VERSION_CHECK', True)
 VERSIONS_CHECK_TIME = 0
 ALLOW_ORGANIZATION_WEBHOOKS = get_bool_env('ALLOW_ORGANIZATION_WEBHOOKS', False)
 CONVERTER_DOWNLOAD_RESOURCES = get_bool_env('CONVERTER_DOWNLOAD_RESOURCES', True)

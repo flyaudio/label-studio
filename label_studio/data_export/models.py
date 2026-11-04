@@ -26,13 +26,13 @@ ExportMixin = load_func(settings.EXPORT_MIXIN)
 
 
 class Export(ExportMixin, models.Model):
-    class Status(models.TextChoices):
+    class Status(models.TextChoices): # 状态枚举
         CREATED = 'created', _('Created')
         IN_PROGRESS = 'in_progress', _('In progress')
         FAILED = 'failed', _('Failed')
         COMPLETED = 'completed', _('Completed')
 
-    title = models.CharField(
+    title = models.CharField( # 导出标题
         _('title'),
         blank=True,
         default='',
@@ -43,11 +43,11 @@ class Export(ExportMixin, models.Model):
         auto_now_add=True,
         help_text='Creation time',
     )
-    file = models.FileField(
+    file = models.FileField( # 导出的文件本身
         upload_to=settings.DELAYED_EXPORT_DIR,
         null=True,
     )
-    md5 = models.CharField(
+    md5 = models.CharField( # 文件校验值
         _('md5 of file'),
         max_length=128,
         default='',
@@ -69,12 +69,12 @@ class Export(ExportMixin, models.Model):
         _('Exporting meta data'),
         default=dict,
     )
-    project = models.ForeignKey(
+    project = models.ForeignKey( # 属于哪个项目，通过外键关联到 projects 表
         'projects.Project',
         related_name='exports',
         on_delete=models.CASCADE,
     )
-    created_by = models.ForeignKey(
+    created_by = models.ForeignKey( # 谁发起的
         settings.AUTH_USER_MODEL,
         related_name='+',
         on_delete=models.SET_NULL,
@@ -174,7 +174,7 @@ class ConvertedFormat(models.Model):
         on_delete=models.CASCADE,
         related_name='export_conversions',
     )
-    export = models.ForeignKey(
+    export = models.ForeignKey( # 关联到某次导出
         Export,
         related_name='converted_formats',
         on_delete=models.CASCADE,
@@ -189,8 +189,8 @@ class ConvertedFormat(models.Model):
         choices=Status.choices,
         default=Status.CREATED,
     )
-    traceback = models.TextField(null=True, blank=True, help_text='Traceback report in case of errors')
-    export_type = models.CharField(max_length=64)
+    traceback = models.TextField(null=True, blank=True, help_text='Traceback report in case of errors')# 出错时的堆栈
+    export_type = models.CharField(max_length=64) # 转成什么格式（CSV/JSON...）
     created_at = models.DateTimeField(
         _('created at'),
         null=True,

@@ -154,7 +154,7 @@ class ProjectVisibleManager(ProjectManager):
         return qs
 
 
-ProjectMixin = load_func(settings.PROJECT_MIXIN)
+ProjectMixin = load_func(settings.PROJECT_MIXIN)# 动态加载,实现行为定制
 
 
 # LSE recalculate all stats
