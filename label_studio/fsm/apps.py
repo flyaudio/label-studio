@@ -27,7 +27,7 @@ class FsmConfig(AppConfig):
         from core.utils.common import is_community
 
         # Always import base models and state_choices (needed for registry)
-        from . import (
+        from . import (# import 即注册
             models,  # noqa: F401  - FsmHistoryStateModel base class
             state_choices,  # noqa: F401  - State choice definitions
         )

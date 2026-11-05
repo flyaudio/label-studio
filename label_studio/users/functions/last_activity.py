@@ -470,5 +470,5 @@ def stamp_last_activity_on_login(sender, user, request=None, **kwargs) -> None:
 
     current_time = django_timezone.now()
     user.last_activity = current_time
-    user.save(update_fields=['last_activity'])
-    set_user_last_activity(user.id, current_time)
+    user.save(update_fields=['last_activity']) # 写数据库
+    set_user_last_activity(user.id, current_time) # 写 Redis
