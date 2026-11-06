@@ -5,6 +5,7 @@ from projects.models import Project
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
+    # 下面每个属性，对应 Project 表的一个字段
     title = factory.Faker('bs')
     description = factory.Faker('paragraph')
     organization = factory.SubFactory(load_func(settings.ORGANIZATION_FACTORY))
@@ -12,4 +13,4 @@ class ProjectFactory(factory.django.DjangoModelFactory):
     is_published = True
 
     class Meta:
-        model = Project
+        model = Project # 绑定的 Django Model

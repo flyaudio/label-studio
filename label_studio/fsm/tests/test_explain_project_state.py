@@ -1,7 +1,7 @@
 """用「可运行的测试」解释 @register_state_model 装饰器和 ProjectState 类。
 
 跑法（在 label_studio 目录、test 环境）：
-    python -m pytest fsm/tests/test_explain_project_state.py -v
+     python -m pytest label_studio/fsm/tests/test_explain_project_state.py -v
 
 这个文件用 5 个测试，从浅到深回答三个问题：
   问题1：@register_state_model('project') 这个装饰器做了什么？

@@ -17,3 +17,6 @@ Django 用的是 MVT 三层架构：
     Model（模型）→ models.py —— 数据层
     View（视图）→ views.py / api.py —— 逻辑层
     Template（模板）→ templates/ —— 展示层
+
+
+https://blog.csdn.net/gitblog_00835/article/details/152396427

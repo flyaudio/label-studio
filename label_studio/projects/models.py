@@ -175,7 +175,7 @@ class Project(ProjectMixin, FsmHistoryStateModel):
     all_objects = ProjectManager()
     __original_label_config = None
 
-    title = models.CharField(
+    title = models.CharField( #通常用于存储较短的字符串，如用户名或标题，它要求设置一个max_length参数
         _('title'),
         null=True,
         blank=True,
@@ -187,12 +187,15 @@ class Project(ProjectMixin, FsmHistoryStateModel):
             MaxLengthValidator(settings.PROJECT_TITLE_MAX_LEN),
         ],
     )
-    description = models.TextField(
+    description = models.TextField( #用于存储较长的文本
         _('description'), blank=True, null=True, default='', help_text='Project description'
     )
 
-    organization = models.ForeignKey(
-        'organizations.Organization', on_delete=models.CASCADE, related_name='projects', null=True
+    organization = models.ForeignKey( #数据库列 organization_id
+        'organizations.Organization', 
+        on_delete=models.CASCADE, #表示当一个Organization对象被删除时，所有关联到Organization的Project对象也会被删除
+        related_name='projects', #用于指定从关联对象反向查询当前对象时使用的名称
+        null=True #允许外键字段在数据库中为NUL
     )
     label_config = models.TextField(
         _('label config'),
@@ -204,7 +207,7 @@ class Project(ProjectMixin, FsmHistoryStateModel):
     parsed_label_config = models.JSONField(
         _('parsed label config'),
         blank=True,
-        null=True,
+        null=True, #可以为空
         default=None,
         help_text='Parsed label config in JSON format. See more about it in documentation',
     )
@@ -248,7 +251,7 @@ class Project(ProjectMixin, FsmHistoryStateModel):
     )
     color = models.CharField(_('color'), max_length=16, default='#FFFFFF', null=True, blank=True)
 
-    created_by = models.ForeignKey(
+    created_by = models.ForeignKey( #但数据库表里实际存的列名是 `created_by_id`（自动加 `_id` 后缀
         settings.AUTH_USER_MODEL,
         related_name='created_projects',
         on_delete=models.SET_NULL,

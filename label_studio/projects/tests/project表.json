@@ -1,0 +1,25 @@
+# project 表里的一行（粗略，只挑关键字段）
+{
+  "id": 1,
+  "title": "药片缺陷检测",                     # ← 你填的项目名
+  "description": "检测泡罩包装中药片划痕/色差/破损",
+  "organization_id": 1,                       # ← 你属于哪个组织
+  "created_by_id": 1,                         # ← 谁建的这个项目
+  "label_config": "<View><Image name='img'/><RectangleLabels name='bbox'>
+                     <Label value='scratch'/><Label value='stain'/>
+                     <Label value='crack'/></RectangleLabels></View>",
+                                              # ↑ 这就是你在"标注界面配置"里选的控件+标签，存成 XML
+  "parsed_label_config": {"img": {...}, "bbox": {...}},   # ↑ 上面 XML 解析后的 JSON（缓存）
+  "maximum_annotations": 2,                  # ← 每张图需要 2 个人标完才算完成
+  "overlap_cohort_percentage": 100,           # ← 100% 任务都需要双人标
+  "sampling": "Sequential sampling",          # ← 标注员按顺序领任务
+  "skip_queue": "REQUEUE_FOR_OTHERS",        # ← 跳过的任务转给别人
+  "show_skip_button": True,
+  "enable_empty_annotation": True,
+  "expert_instruction": "请把划痕完整框出，忽略微小划痕",  # ← 标注指南 HTML
+  "is_published": True,                       # ← 是否已发布给标注员
+  "is_draft": False,
+  "token": "a8f3k...",                       # ← 分享链接用的随机 token
+  "deleted_at": None,                        # ← 软删除（删了但保留，没真删库）
+  "created_at": "2026-11-05 10:00:00",
+}

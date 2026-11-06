@@ -13,7 +13,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     password = factory.PostGenerationMethodCall('set_password', 'testpassword')
 
     class Meta:
-        model = User
+        model = User # which Django Model
 
     @factory.post_generation
     def active_organization(self, create, extracted, **kwargs):
