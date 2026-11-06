@@ -126,9 +126,9 @@ pip install poetry
 poetry install
 # Run database migrations
 python label_studio/manage.py migrate
-python label_studio/manage.py collectstatic
+python label_studio/manage.py collectstatic   # 收集静态文件
 # Start the server in development mode at http://localhost:8080
-python label_studio/manage.py runserver
+python label_studio/manage.py runserver 0.0.0.0:8080
 ```
 
 ### Deploy in a cloud instance
