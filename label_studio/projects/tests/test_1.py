@@ -1,12 +1,15 @@
+import pytest
+import logging
 import factory
 from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
-import pytest
 from users.tests.factories import UserFactory
 from projects.tests.factories import ProjectFactory
 from projects.models import Project
 from tasks.models import Task
 from tasks.models import Annotation
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db

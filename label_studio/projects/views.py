@@ -8,7 +8,7 @@ from django.shortcuts import render
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@login_required  # 未登录时会引导去登录
 def project_list(request):
     return render(request, 'projects/list.html')
 

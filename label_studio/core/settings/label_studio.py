@@ -20,7 +20,7 @@ if INACTIVITY_SESSION_TIMEOUT_ENABLED:
 
 ADD_DEFAULT_ML_BACKENDS = False
 
-LOGGING['root']['level'] = get_env('LOG_LEVEL', 'WARNING')
+LOGGING['root']['level'] = get_env('LOG_LEVEL', 'INFO') #DEBUG, WARNING
 
 DEBUG = get_bool_env('DEBUG', False)
 
