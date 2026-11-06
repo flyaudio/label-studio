@@ -77,12 +77,16 @@ def _truncate_args_for_logging(args, kwargs, max_length=30):
         return 'failed to format arguments'
 
 
-try:
-    _redis = get_connection()
-    _redis.ping()
-    logger.debug('=> Redis is connected successfully.')
-except:  # noqa: E722
-    logger.debug('=> Redis is not connected.')
+if settings.REDIS_ENABLED:
+    try:
+        _redis = get_connection()
+        _redis.ping()
+        logger.debug('=> Redis is connected successfully.')
+    except:  # noqa: E722
+        logger.debug('=> Redis is not connected.')
+        _redis = None
+else:
+    logger.debug('=> Redis support is disabled; skipping connection check.')
     _redis = None
 
 
