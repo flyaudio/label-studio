@@ -76,7 +76,7 @@ def make_queryset_from_iterable(tasks_list):
                 ids.append(task)
             else:
                 raise ValueError(f'Unknown object type: {str(task)}')
-        queryset = Task.objects.filter(id__in=ids)
+        queryset = Task.objects.filter(id__in=ids) #按这批 id，从数据库查出对应的 Task 记录
     return queryset
 
 
