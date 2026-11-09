@@ -253,22 +253,22 @@ INSTALLED_APPS = [
     'fsm',  # MUST be before apps that register FSM transitions (projects, tasks)
 
     #自定义业务
-    'core',
-    'users',
-    'organizations',
-    'data_import',
-    'data_export',
-    'projects',
-    'tasks',
-    'data_manager',
-    'io_storages',
-    'ml',
+    'core',         #通用工具，不是业务本身
+    'users',        #User
+    'organizations',#Organization、OrganizationMember
+    'data_import',  #FileUpload
+    'data_export',  #Export、ConvertedFormat
+    'projects',     #Project、ProjectSummary
+    'tasks',        #Task、Annotation、Prediction
+    'data_manager', #数据管理界面：保存视图、筛选器配置
+    'io_storages',  #云存储对接（S3、GCS、Azure 等）
+    'ml',           #MLBackend、MLBackendPredictionJob
     'webhooks',
-    'labels_manager',
-    'ml_models',
-    'ml_model_providers',
-    'jwt_auth',
-    'session_policy',
+    'labels_manager',#Label、LabelLink
+    'ml_models',    #模型生命周期：模型版本、训练运行记录
+    'ml_model_providers',#外部模型提供商连接（OpenAI 等）
+    'jwt_auth',     #JWT 认证配置
+    'session_policy',#	会话安全策略（超时等）
 ]
 
 MIDDLEWARE = [

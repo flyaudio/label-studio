@@ -97,7 +97,7 @@ class FSMStateQuerySetMixin:
         if not state_model:
             # No state model registered, return queryset as-is
             logger.debug(f'No state model registered for {entity_name}, skipping annotation')
-            return self
+            return self #没有数据库操作
 
         # Get the foreign key field name on the state model
         # e.g., 'task_id' for TaskState
@@ -111,7 +111,7 @@ class FSMStateQuerySetMixin:
         # 3. Django optimizes this into a single JOIN or lateral subquery
         lookup = {fk_field: OuterRef('pk')}
         lookup.update({field: OuterRef(field) for field in state_model.latest_state_scope_fields})
-        current_state_subquery = Subquery(state_model.objects.filter(**lookup).order_by('-id').values('state')[:1])
+        current_state_subquery = Subquery(state_model.objects.filter(**lookup).order_by('-id').values('state')[:1]) ## 取「id 最大」那一条的 state
 
         # Annotate the queryset with the current state
         return self.annotate(current_state=current_state_subquery)
