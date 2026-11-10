@@ -20,3 +20,11 @@ Django 用的是 MVT 三层架构：
 
 
 https://blog.csdn.net/gitblog_00835/article/details/152396427
+
+
+annotation_templates/	预定义的标注模板（数据/资源，不是 app）
+templates/	            Django 的 HTML 模板文件
+tests/	                测试代码
+__pycache__/	        Python 字节码缓存，可忽略
+
+主干 5 个：data_import → projects → tasks →（标注）→ data_export，对应「导入数据 → 建项目 → 生成任务 → 标注 → 导出结果」这条核心流程；

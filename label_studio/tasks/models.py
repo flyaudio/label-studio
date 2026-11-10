@@ -72,7 +72,7 @@ class Task(TaskMixin, FsmHistoryStateModel):
         'Backend for embeddings, advanced vectors, and other info. It is passed to '
         'ML during training/predicting steps.',
     )
-    project = models.ForeignKey(
+    project = models.ForeignKey(#反查,project.tasks.all()
         'projects.Project',
         related_name='tasks',
         on_delete=models.CASCADE,
@@ -678,28 +678,28 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
     task = models.ForeignKey(
         'tasks.Task',
         on_delete=models.CASCADE,
-        related_name='annotations',
+        related_name='annotations', #反查,task.annotations.all()
         null=True,
         help_text='Corresponding task for this annotation',
     )
     # duplicate relation to project for performance reasons
     project = models.ForeignKey(
         'projects.Project',
-        related_name='annotations',
+        related_name='annotations',#反查,project.annotations.all()
         on_delete=models.CASCADE,
         null=True,
         help_text='Project ID for this annotation',
     )
     completed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        related_name='annotations',
+        related_name='annotations',#反查,user.annotations.all()
         on_delete=models.SET_NULL,
         null=True,
         help_text='User ID of the person who created this annotation',
     )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        related_name='updated_annotations',
+        related_name='updated_annotations',#反查,user.updated_annotations.all()
         on_delete=models.SET_NULL,
         null=True,
         verbose_name=_('updated by'),
@@ -730,17 +730,17 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
     )
     result_count = models.IntegerField(_('result count'), default=0, help_text='Results inside of annotation counter')
 
-    parent_prediction = models.ForeignKey(
+    parent_prediction = models.ForeignKey(#这个标注是「一键采纳」某条预测生成的
         'tasks.Prediction',
         on_delete=models.SET_NULL,
-        related_name='child_annotations',
+        related_name='child_annotations',#反查,
         null=True,
         help_text='Points to the prediction from which this annotation was created',
     )
-    parent_annotation = models.ForeignKey(
+    parent_annotation = models.ForeignKey(#这个标注是「复制/派生」自另一个标注
         'tasks.Annotation',
         on_delete=models.SET_NULL,
-        related_name='child_annotations',
+        related_name='child_annotations',#反查,annotation.child_annotation.all()
         null=True,
         help_text='Points to the parent annotation from which this annotation was created',
     )
@@ -760,7 +760,7 @@ class Annotation(AnnotationMixin, FsmHistoryStateModel):
         default=None,
         null=True,
     )
-    last_created_by = models.ForeignKey(
+    last_created_by = models.ForeignKey(#反查,user.annotation_set.all()
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         verbose_name=_('last created by'),
@@ -934,7 +934,7 @@ class TaskLock(FsmHistoryStateModel):
     unique_id = models.UUIDField(default=uuid.uuid4, null=True, blank=True, unique=True, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        related_name='task_locks',
+        related_name='task_locks',#反查,user.task_locks.all()
         on_delete=models.CASCADE,
         help_text='User who locked this task',
     )
@@ -978,7 +978,7 @@ class AnnotationDraft(FsmHistoryStateModel):
     task = models.ForeignKey(
         'tasks.Task',
         on_delete=models.CASCADE,
-        related_name='drafts',
+        related_name='drafts',#反查,task.drafts.all()
         blank=True,
         null=True,
         help_text='Corresponding task for this draft',
@@ -986,14 +986,14 @@ class AnnotationDraft(FsmHistoryStateModel):
     annotation = models.ForeignKey(
         'tasks.Annotation',
         on_delete=models.CASCADE,
-        related_name='drafts',
+        related_name='drafts',#反查,annotation.drafts.all()
         blank=True,
         null=True,
         help_text='Corresponding annotation for this draft',
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        related_name='drafts',
+        related_name='drafts',#反查,user.drafts.all()
         on_delete=models.CASCADE,
         help_text='User who created this draft',
     )
@@ -1090,8 +1090,8 @@ class Prediction(models.Model):
     )
     mislabeling = models.FloatField(_('mislabeling'), default=0.0, help_text='Related task mislabeling score')
 
-    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, related_name='predictions')
-    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='predictions', null=True)
+    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, related_name='predictions')#反查,task.predictions.all()
+    project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='predictions', null=True)#反查,project.predictions.all()
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
 
