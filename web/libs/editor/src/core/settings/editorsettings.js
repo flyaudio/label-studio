@@ -52,7 +52,7 @@ export default {
     },
     description: "Select regions after creating",
     onChangeEvent: "toggleSelectAfterCreate",
-    defaultValue: false,
+    defaultValue: true,
   },
   showLineNumbers: {
     newUI: {

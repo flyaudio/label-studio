@@ -359,5 +359,13 @@
   "annotation:toggle-auto-annotation": {
     "key": "shift+alt+a",
     "description": "Toggle Auto-Annotation"
+  },
+  "task:next": {
+    "key": "d",
+    "description": "Next task"
+  },
+  "task:prev": {
+    "key": "a",
+    "description": "Previous task"
   }
 }

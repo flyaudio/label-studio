@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from "react";
 import { observer } from "mobx-react";
-import { Button, Tooltip } from "@humansignal/ui";
+import { Button } from "@humansignal/ui";
 import { CaretLeftIcon, CaretRightIcon } from "@humansignal/icons";
 import { cn } from "../../utils/bem";
 import { FF_LEAP_1173, isFF } from "../../utils/feature-flags";
 import { guidGenerator } from "../../utils/unique";
 import { isDefined } from "../../utils/utilities";
+import { Hotkey } from "../../core/Hotkey";
 import "./CurrentTask.prefix.css";
 
 // Manager roles that can force-skip unskippable tasks (OW=Owner, AD=Admin, MA=Manager)
@@ -80,7 +81,7 @@ export const CurrentTask = observer(({ store }) => {
         </div>
         {historyEnabled && (
           <div className={cn("current-task").elem("history-controls").mod({ newui: true }).toClassName()}>
-            <Tooltip title={prevButtonMessage}>
+            <Hotkey.Tooltip name="task:prev" title={prevButtonMessage}>
               <Button
                 data-testid="prev-task"
                 aria-label={prevButtonMessage}
@@ -91,8 +92,8 @@ export const CurrentTask = observer(({ store }) => {
                 leading={<CaretLeftIcon size={24} />}
                 size="small"
               />
-            </Tooltip>
-            <Tooltip title={nextButtonMessage}>
+            </Hotkey.Tooltip>
+            <Hotkey.Tooltip name="task:next" title={nextButtonMessage}>
               <Button
                 data-testid="next-task"
                 aria-label={nextButtonMessage}
