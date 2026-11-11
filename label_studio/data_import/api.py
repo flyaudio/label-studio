@@ -21,6 +21,8 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.http import http_date
+from django.views.static import was_modified_since
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from label_studio_sdk.label_interface import LabelInterface
@@ -1015,7 +1017,25 @@ class UploadedFileResponse(generics.RetrieveAPIView):
         if file.storage.exists(file.name):
             content_type, encoding = mimetypes.guess_type(str(file.name))
             content_type = content_type or 'application/octet-stream'
-            return RangedFileResponse(request, file.open(mode='rb'), content_type=content_type)
+
+            # Uploaded file names embed a random UUID prefix, so a given URL is
+            # immutable — cache it aggressively. Serving is auth-protected,
+            # hence `private`. Some storages (e.g. cloud backends) may not
+            # expose a modification time; skip validators in that case.
+            try:
+                modified_ts = file.storage.get_modified_time(file.name).timestamp()
+            except (NotImplementedError, OSError):
+                modified_ts = None
+
+            if modified_ts is not None:
+                if not was_modified_since(request.META.get('HTTP_IF_MODIFIED_SINCE'), modified_ts):
+                    return HttpResponse(status=304)
+
+            response = RangedFileResponse(request, file.open(mode='rb'), content_type=content_type)
+            if modified_ts is not None:
+                response['Last-Modified'] = http_date(modified_ts)
+                response['Cache-Control'] = 'private, max-age=31536000, immutable'
+            return response
 
         return Response(status=status.HTTP_404_NOT_FOUND)
 

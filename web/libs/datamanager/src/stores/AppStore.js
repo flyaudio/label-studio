@@ -624,6 +624,8 @@ export const AppStore = types
     }),
 
     fetchUsers: flow(function* () {
+      if (self.users.length > 0) return; // already loaded for this session
+
       const list = yield self.apiCall("users", {
         __useQueryCache: {
           prefixKey: "organizationMembers",
@@ -636,6 +638,16 @@ export const AppStore = types
 
     fetchData: flow(function* ({ isLabelStream } = {}) {
       self.setLoading(true);
+
+      // Load organization users before the task list renders: Assignee fields
+      // (annotators, reviewers, updated_by) store references to User, and MST
+      // throws "Failed to resolve reference" when dereferencing a missing user,
+      // crashing the whole page.
+      try {
+        yield self.fetchUsers();
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
 
       const { tab, task, labeling, query } = History.getParams();
 

@@ -9,7 +9,7 @@ import {
   IconExternal,
   IconCopyOutline,
 } from "@humansignal/icons";
-import { Form, Input } from "../../components/Form";
+import { Form, Input, Toggle } from "../../components/Form";
 import { Modal } from "../../components/Modal/Modal";
 import { Space } from "../../components/Space/Space";
 import { useAPI } from "../../providers/ApiProvider";
@@ -180,6 +180,12 @@ export const ExportPage = () => {
 
         <Form ref={form}>
           <Input type="hidden" name="exportType" value={currentFormat} />
+          <Toggle
+            name="download_all_tasks"
+            defaultChecked
+            label="Include unlabeled tasks"
+            description="Export blank annotations and the corresponding images for tasks without annotations"
+          />
         </Form>
 
         <div className={cn("export-page").elem("footer").toClassName()}>

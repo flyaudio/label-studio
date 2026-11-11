@@ -220,7 +220,6 @@ class ExportAPI(generics.RetrieveAPIView):
         interpolate_key_frames = query_serializer.validated_data['interpolate_key_frames']
 
         tasks_ids = request.GET.getlist('ids[]')
-        print(f"tasks_ids=", tasks_ids)
 
         logger.debug('Get tasks')
         query = Task.objects.filter(project=project)
@@ -242,7 +241,6 @@ class ExportAPI(generics.RetrieveAPIView):
                 context={'interpolate_key_frames': interpolate_key_frames},
             ).data
         logger.debug('Prepare export files')
-        print("get_export_hostname(request) = ", get_export_hostname(request))
 
         export_file, content_type, filename = DataExport.generate_export_file(
             project,

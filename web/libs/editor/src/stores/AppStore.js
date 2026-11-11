@@ -18,12 +18,15 @@ import Task from "./TaskStore";
 import { UserExtended } from "./UserStore";
 import { UserLabels } from "./UserLabels";
 import { emitRegionDeleted } from "../utils/labelingTelemetry";
-import { FF_REVIEWER_FLOW, FF_SIMPLE_INIT, isFF } from "../utils/feature-flags";
+import { FF_LEAP_1173, FF_REVIEWER_FLOW, FF_SIMPLE_INIT, isFF } from "../utils/feature-flags";
 import { CommentStore } from "./Comment/CommentStore";
 import { CustomButton } from "./CustomButton";
 import { REJECT_ACTION_HOTKEY_NAMES } from "../utils/rejectHotkeys";
 
 const hotkeys = Hotkey("AppStore", "Global Hotkeys");
+
+// Manager roles that can force-skip unskippable tasks (OW=Owner, AD=Admin, MA=Manager)
+const MANAGER_ROLES = ["OW", "AD", "MA"];
 
 export default types
   .model("AppStore", {
@@ -258,6 +261,36 @@ export default types
         return self.task.id !== firstTaskId;
       }
       return false;
+    },
+    /**
+     * State of the bottom-bar "next" button, shared by the button
+     * (CurrentTask.jsx) and the task:next hotkey so keyboard and mouse
+     * behave identically, including the postpone fallback at the end of
+     * the queue.
+     */
+    get nextButtonState() {
+      const hasSubmittedAnnotation = isDefined(self.annotationStore.selected.pk);
+      const isEnterprise = window.APP_SETTINGS?.billing?.enterprise;
+      const skipDisabled = isEnterprise ? self.task?.allow_skip === false : false;
+      const userRole = window.APP_SETTINGS?.user?.role;
+      const hasForceSkipPermission = MANAGER_ROLES.includes(userRole);
+      const canSkipOrPostpone = !skipDisabled || hasForceSkipPermission;
+      const canPostpone =
+        !hasSubmittedAnnotation &&
+        !self.canGoNextTask &&
+        (!isFF(FF_LEAP_1173) || self.hasInterface("skip")) &&
+        !self.hasInterface("review") &&
+        self.hasInterface("postpone") &&
+        canSkipOrPostpone;
+      const requiresAnnotationSubmission =
+        skipDisabled && !hasForceSkipPermission && !hasSubmittedAnnotation;
+
+      return {
+        canNavigateNext: self.canGoNextTask && !requiresAnnotationSubmission,
+        canPostponeTask: canPostpone && !requiresAnnotationSubmission,
+        requiresAnnotationSubmission,
+        canSkipOrPostpone,
+      };
     },
     get forceAutoAnnotation() {
       return getEnv(self).forceAutoAnnotation;
@@ -673,6 +706,18 @@ export default types
         const results = selected.appendResults(serializedSelection);
 
         selected.selectAreas(results);
+      });
+
+      // Task navigation, X-AnyLabeling parity: d = next task, a = previous task.
+      // task:next shares the button's action (including postpone at queue end);
+      // task:prev guards itself via canGoPrevTask.
+      hotkeys.addNamed("task:next", () => {
+        self.nextOrPostpone();
+      });
+
+      hotkeys.addNamed("task:prev", () => {
+        if (!self.hydrated || self.isLoading || self.noTask) return;
+        self.prevTask();
       });
     }
 
@@ -1180,6 +1225,23 @@ export default types
       }
     }
 
+    /**
+     * Exactly what clicking the bottom-bar "next" button does: navigate to
+     * the next task in history, or postpone the current one when the queue
+     * runs out. Used by both the button and the task:next hotkey.
+     */
+    function nextOrPostpone() {
+      if (!self.hydrated || self.isLoading || self.noTask) return;
+
+      const { canNavigateNext, canPostponeTask } = self.nextButtonState;
+
+      if (canNavigateNext) {
+        self.nextTask();
+      } else if (canPostponeTask) {
+        self.postponeTask();
+      }
+    }
+
     function setUsers(users) {
       self.users.replace(users);
     }
@@ -1253,6 +1315,7 @@ export default types
       addAnnotationToTaskHistory,
       nextTask,
       prevTask,
+      nextOrPostpone,
       postponeTask,
       incrementQueuePosition,
       beforeDestroy() {

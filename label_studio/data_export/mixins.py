@@ -13,7 +13,7 @@ from core.utils.io import (
     get_all_files_from_dir,
     get_temp_dir,
 )
-from data_export.functions import CONVERTER_ACCESS_TOKEN, converter_http_session
+from data_export.functions import CONVERTER_ACCESS_TOKEN, converter_http_session, strip_uuid_prefixes_from_export
 from data_manager.models import View
 from django.conf import settings
 from django.core.files import File
@@ -462,6 +462,7 @@ class ExportMixin:
                 out_dir,
             )
             converter.convert(input_file_path, out_dir, to_format, is_dir=False)
+            strip_uuid_prefixes_from_export(out_dir)
             logger.info('Converter finished: export_id=%s to_format=%s', self.id, to_format)
 
             files = get_all_files_from_dir(out_dir)

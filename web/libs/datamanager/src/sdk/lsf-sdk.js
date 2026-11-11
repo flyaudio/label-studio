@@ -24,6 +24,10 @@ const waitForPaint = () =>
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   });
 
+// How many neighboring tasks' images to prefetch ahead/behind the current one
+// (same value the editor uses for multi-image prefetch within a task).
+const IMAGE_PREFETCH_WINDOW = 3;
+
 export const shouldSaveDraftOnSelectionChange = (annotation) => {
   if (typeof annotation?.needsDraftSave === "function") {
     return annotation.needsDraftSave();
@@ -219,8 +223,8 @@ export class LSFWrapper {
       });
     }
 
-    const queueTotal = dm.store.project.reviewer_queue_total || dm.store.project.queue_total;
-    const queueDone = dm.store.project.queue_done;
+    const queueTotal = dm.store.project.reviewer_queue_total || dm.store.project.queue_total; // 队列任务总数
+    const queueDone = dm.store.project.queue_done;// 已标注完成数
     const queueLeft = dm.store.project.queue_left;
     const queuePosition = queueDone ? queueDone + 1 : queueLeft ? queueTotal - queueLeft + 1 : 1;
     const commentClassificationConfig = dm.store.project.comment_classification_config;
@@ -488,6 +492,8 @@ export class LSFWrapper {
       // `finally` — a failed load must leave hotkeys inert.
       if (loadSeq === this._setLSFTaskSeq) {
         this.lsf.setHydrated?.(true);
+        // Best-effort prefetch of adjacent task images for snappy sequential navigation.
+        this.prefetchAdjacentTaskImages(task.id);
       }
     } catch (error) {
       console.error("[LSFWrapper] setLSFTask failed", error);
@@ -1346,6 +1352,114 @@ export class LSFWrapper {
     await this.saveDraft();
     await this.loadTask(prevTaskId, prevAnnotationId, true);
   };
+
+  /**
+   * Image URLs for a task model: `data.image` may be a string or an array
+   * (multi-image tasks).
+   */
+  getImageUrlsFromTask(task) {
+    const value = task?.data?.image;
+
+    if (typeof value === "string") return [value];
+    if (Array.isArray(value)) return value.filter((url) => typeof url === "string");
+
+    return [];
+  }
+
+  /**
+   * Best-effort prefetch of neighboring task images (±IMAGE_PREFETCH_WINDOW)
+   * so sequential navigation hits the blob cache instead of the network.
+   * Near the end of the loaded list we also peek the next page's image URLs
+   * without touching the grid list (setList with reload would replace it).
+   */
+  async prefetchAdjacentTaskImages(taskId) {
+    try {
+      const taskStore = this.datamanager.store.taskStore;
+      const list = taskStore.list;
+      const index = list.findIndex((t) => t.id === taskId);
+
+      if (index < 0) return;
+
+      const urls = [];
+
+      for (let offset = -IMAGE_PREFETCH_WINDOW; offset <= IMAGE_PREFETCH_WINDOW; offset++) {
+        if (offset === 0) continue;
+        urls.push(...this.getImageUrlsFromTask(list[index + offset]));
+      }
+
+      const peekedUrls = await this.peekAdjacentPageImageUrls(taskId, index, list.length);
+      urls.push(...peekedUrls);
+
+      for (const url of urls) {
+        imageCache.load(url, "anonymous").catch(() => {});
+      }
+    } catch (error) {
+      // Prefetch is best-effort: never surface errors to the user.
+      console.debug("[LSFWrapper] image prefetch failed", error);
+    }
+  }
+
+  /**
+   * When the current task is within IMAGE_PREFETCH_WINDOW of the end of the
+   * loaded list, fetch the next page's image URLs directly from the API.
+   * Memoized per page; once the user reaches a task from the previously
+   * peeked page, the following page gets peeked.
+   */
+  async peekAdjacentPageImageUrls(taskId, index, listLength) {
+    if (index + IMAGE_PREFETCH_WINDOW < listLength) return [];
+
+    const store = this.datamanager.store;
+    const taskStore = store.taskStore;
+
+    // The user reached a task from the previously peeked page — advance.
+    if (this._peekedPageTaskIds?.has(taskId)) {
+      const nextPage = this._peekedPage + 1;
+
+      // Don't peek past the last page.
+      if (nextPage <= taskStore.totalPages) {
+        const data = await this.fetchTaskPageImageUrls(nextPage);
+        return data?.urls ?? [];
+      }
+      return [];
+    }
+
+    if (!(taskStore.page < taskStore.totalPages)) return [];
+
+    if (this._peekedPage === taskStore.page + 1) {
+      return this._peekedPageUrls ?? [];
+    }
+
+    const data = await this.fetchTaskPageImageUrls(taskStore.page + 1);
+    return data?.urls ?? [];
+  }
+
+  async fetchTaskPageImageUrls(page) {
+    const store = this.datamanager.store;
+    const taskStore = store.taskStore;
+    const view = store.viewsStore.selected;
+    const params = { page, page_size: taskStore.pageSize };
+
+    if (view?.virtual) {
+      params.query = view.query;
+    } else {
+      params.view = view?.id;
+    }
+
+    try {
+      const data = await store.apiCall("tasks", params);
+      const tasks = data?.tasks ?? [];
+      const urls = tasks.flatMap((t) => this.getImageUrlsFromTask(t));
+
+      this._peekedPage = page;
+      this._peekedPageTaskIds = new Set(tasks.map((t) => t.id));
+      this._peekedPageUrls = urls.slice(0, IMAGE_PREFETCH_WINDOW * 2);
+
+      return { urls: this._peekedPageUrls };
+    } catch (error) {
+      console.debug("[LSFWrapper] peek next page failed", error);
+      return null;
+    }
+  }
   async submitCurrentAnnotation(eventName, submit, includeId = false, loadNext = true) {
     const { taskID, currentAnnotation } = this;
     const unique_id = this.task.unique_lock_id;

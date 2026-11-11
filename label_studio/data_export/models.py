@@ -10,7 +10,7 @@ from datetime import datetime
 import ujson as json
 from core.utils.common import load_func
 from core.utils.io import get_all_files_from_dir, get_temp_dir, path_to_open_binary_file
-from data_export.functions import CONVERTER_ACCESS_TOKEN, converter_http_session
+from data_export.functions import CONVERTER_ACCESS_TOKEN, converter_http_session, strip_uuid_prefixes_from_export
 from django.conf import settings
 from django.db import models, transaction
 from django.db.models.signals import post_delete, post_save
@@ -137,6 +137,7 @@ class DataExport(object):
             with open(input_json, 'w', encoding='utf-8') as f:
                 f.write(data)
             converter.convert(input_json, tmp_dir, output_format, is_dir=False)
+            strip_uuid_prefixes_from_export(tmp_dir)
             files = get_all_files_from_dir(tmp_dir)
             # if only one file is exported - no need to create archive
             if len(os.listdir(tmp_dir)) == 1:

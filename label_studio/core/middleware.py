@@ -185,15 +185,25 @@ class ContextLogMiddleware(CommonMiddleware):
 
     def __call__(self, request):
         body = None
-        try:
-            body = json.loads(request.body)
-        except:  # noqa: E722
+        # Never read multipart/form-data bodies here: consuming the request
+        # stream before DRF parses it breaks file uploads (RawPostDataException),
+        # and file bytes are useless for context logging anyway.
+        if not request.content_type.startswith('multipart/form-data'):
             try:
-                body = request.body.decode('utf-8')
-            except:  # noqa: E722
-                pass
+                body = json.loads(request.body)
+            except Exception as exc:  # noqa: E722
+                logger.debug('ContextLogMiddleware: failed to parse request body as JSON: %r', exc)
+                try:
+                    body = request.body.decode('utf-8')
+                except Exception as exc:  # noqa: E722
+                    logger.debug('ContextLogMiddleware: failed to decode request body: %r', exc)
+                    pass
 
-        if 'server_id' not in request:
+        # NOTE: `'server_id' in request` must not be used here: Django's HttpRequest
+        # is iterable (iterates readline() over the raw body stream until EOF), so a
+        # membership test consumes the request body and breaks DRF multipart parsing
+        # with RawPostDataException on file uploads. Use hasattr instead.
+        if not hasattr(request, 'server_id'):
             setattr(request, 'server_id', self.log._get_server_id())
 
         response = self.get_response(request)
@@ -202,7 +212,8 @@ class ContextLogMiddleware(CommonMiddleware):
         return response
 
     def process_request(self, request):
-        if 'server_id' not in request:
+        # Same reason as __call__: never test membership on the request object.
+        if not hasattr(request, 'server_id'):
             setattr(request, 'server_id', self.log._get_server_id())
 
 

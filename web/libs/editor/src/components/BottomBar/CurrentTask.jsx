@@ -3,14 +3,9 @@ import { observer } from "mobx-react";
 import { Button } from "@humansignal/ui";
 import { CaretLeftIcon, CaretRightIcon } from "@humansignal/icons";
 import { cn } from "../../utils/bem";
-import { FF_LEAP_1173, isFF } from "../../utils/feature-flags";
 import { guidGenerator } from "../../utils/unique";
-import { isDefined } from "../../utils/utilities";
 import { Hotkey } from "../../core/Hotkey";
 import "./CurrentTask.prefix.css";
-
-// Manager roles that can force-skip unskippable tasks (OW=Owner, AD=Admin, MA=Manager)
-const MANAGER_ROLES = ["OW", "AD", "MA"];
 
 export const CurrentTask = observer(({ store }) => {
   useEffect(() => {
@@ -20,31 +15,10 @@ export const CurrentTask = observer(({ store }) => {
   const historyEnabled = store.hasInterface("topbar:prevnext");
   const showCounter = store.hasInterface("topbar:task-counter");
 
-  const task = store.task;
-  const isEnterprise = window.APP_SETTINGS?.billing?.enterprise;
-  const skipDisabled = isEnterprise ? task?.allow_skip === false : false;
-  const userRole = window.APP_SETTINGS?.user?.role;
-  const hasForceSkipPermission = MANAGER_ROLES.includes(userRole);
-  const canSkipOrPostpone = !skipDisabled || hasForceSkipPermission;
-
-  // Check if user has submitted an annotation (pk is defined means annotation is in database)
-  const hasSubmittedAnnotation = isDefined(store.annotationStore.selected.pk);
-
-  // If task cannot be skipped and user doesn't have force_skip, also disable postpone
-  // Note: store.hasInterface("postpone") is set by lsf-sdk based on task.allow_postpone from API
-  const canPostpone =
-    !hasSubmittedAnnotation &&
-    !store.canGoNextTask &&
-    (!isFF(FF_LEAP_1173) || store.hasInterface("skip")) &&
-    !store.hasInterface("review") &&
-    store.hasInterface("postpone") &&
-    canSkipOrPostpone;
-
-  // For unskippable tasks, force user to submit annotation before navigating
-  // Block both history navigation (next task) and postpone if no annotation submitted
-  const requiresAnnotationSubmission = skipDisabled && !hasForceSkipPermission && !hasSubmittedAnnotation;
-  const canNavigateNext = store.canGoNextTask && !requiresAnnotationSubmission;
-  const canPostponeTask = canPostpone && !requiresAnnotationSubmission;
+  // Single source of truth for the next button, shared with the task:next
+  // hotkey in AppStore so keyboard and mouse behave identically.
+  const { canNavigateNext, canPostponeTask, requiresAnnotationSubmission, canSkipOrPostpone } =
+    store.nextButtonState;
 
   // Memoized messages for previous button
   const prevButtonMessage = useMemo(() => {
@@ -99,12 +73,12 @@ export const CurrentTask = observer(({ store }) => {
                 aria-label={nextButtonMessage}
                 look="string"
                 disabled={!canNavigateNext && !canPostponeTask}
-                onClick={canNavigateNext ? store.nextTask : store.postponeTask}
+                onClick={store.nextOrPostpone}
                 variant={!canNavigateNext && canPostponeTask ? "primary" : "neutral"}
                 leading={<CaretRightIcon size={24} />}
                 size="small"
               />
-            </Tooltip>
+            </Hotkey.Tooltip>
           </div>
         )}
       </div>
