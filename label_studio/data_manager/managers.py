@@ -253,7 +253,7 @@ def get_fields_for_filter_ordering(prepare_params):
 
     # collect fields from ordering
     if prepare_params.ordering:
-        ordering_field_name = prepare_params.ordering[0].replace('tasks:', '').replace('-', '')
+        ordering_field_name = prepare_params.ordering[0].replace('tasks:', '').replace('-', '') #tasks:-agreement,去掉 'tasks:' 和 '-'
         result.append(ordering_field_name)
 
     # collect fields from filters
@@ -477,6 +477,8 @@ def get_fields_for_evaluation(prepare_params, user, skip_regular=True, request=N
 
     result = []
     result += get_fields_for_filter_ordering(prepare_params)
+    print("result===", result)
+    return result
 
     # visible fields calculation
     fields = prepare_params.data.get('hiddenColumns', None)

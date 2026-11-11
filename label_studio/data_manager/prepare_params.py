@@ -120,11 +120,11 @@ class SelectedItems(BaseModel):
 
 class PrepareParams(BaseModel):
     project: Union[int, List[int]]  # Support both single project and multiple projects
-    ordering: List[str] = []
-    selectedItems: Optional[SelectedItems] = None
-    filters: Optional[Filters] = None
+    ordering: List[str] = [] #e.g. ['-tasks:created_at'] -> 按创建时间降序（- 号就是降序）
+    selectedItems: Optional[SelectedItems] = None # {"all":true,"included":[],"excluded":[]}
+    filters: Optional[Filters] = None #加筛选 {"conjunction":"and","items":[{"filter":"filter:tasks:is_labeled","operator":"equal","type":"Boolean","value":true}]}
     data: Optional[dict] = None
-    request: Optional[Any] = None
+    request: Optional[Any] = None # 后端注入（非前端传）
 
     @field_validator('ordering')
     @classmethod
