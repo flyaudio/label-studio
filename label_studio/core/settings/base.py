@@ -382,9 +382,9 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.request',# 让模板里能直接用 {{ request }}
+                'django.contrib.auth.context_processors.auth',# 提供 {{ user }}、{{ perms }}
+                'django.contrib.messages.context_processors.messages',# 闪现消息
                 'core.context_processors.settings',
             ],
             'builtins': ['django.templatetags.i18n'],

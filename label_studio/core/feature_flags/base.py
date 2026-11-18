@@ -24,7 +24,7 @@ get_user_repr_from_organization_id = load_func(settings.FEATURE_FLAGS_GET_USER_R
 def get_feature_file_path():
     package_name = 'label_studio' if settings.VERSION_EDITION == 'Community' else 'label_studio_enterprise'
     if settings.FEATURE_FLAGS_FILE.startswith('/'):
-        return settings.FEATURE_FLAGS_FILE
+        return settings.FEATURE_FLAGS_FILE  # 绝对路径直接用
     else:
         return find_node(package_name, settings.FEATURE_FLAGS_FILE, 'file')
 
@@ -42,16 +42,16 @@ if settings.FEATURE_FLAGS_FROM_FILE:
     logger.info(f'Read flags from file {feature_flags_file}')
     data_source = Files.new_data_source(paths=[feature_flags_file])
     config = Config(
-        sdk_key=settings.FEATURE_FLAGS_API_KEY or 'whatever', update_processor_class=data_source, send_events=False
+        sdk_key=settings.FEATURE_FLAGS_API_KEY or 'whatever', update_processor_class=data_source, send_events=False #不上报LD
     )
     ldclient.set_config(config)
     client = ldclient.get()
 elif settings.FEATURE_FLAGS_OFFLINE:
     # On-prem usage, without feature flags file
-    ldclient.set_config(Config(settings.FEATURE_FLAGS_API_KEY or 'whatever', offline=True))
+    ldclient.set_config(Config(settings.FEATURE_FLAGS_API_KEY or 'whatever', offline=True)) #默认default值
     client = ldclient.get()
 else:
-    # Production usage
+    # Production usage，连 LaunchDarkly
     if hasattr(settings, 'REDIS_LOCATION'):
         logger.debug(f'Set LaunchDarkly config with Redis feature store at {settings.REDIS_LOCATION}')
         store_kwargs = {
