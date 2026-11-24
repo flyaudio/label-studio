@@ -448,15 +448,18 @@ class MLBackendPredictionJob(models.Model):
 
 
 class MLBackendTrainJob(models.Model):
+    """训练任务记录"""
     job_id = models.CharField(max_length=128)
-    ml_backend = models.ForeignKey(MLBackend, related_name='train_jobs', on_delete=models.CASCADE)
+    ml_backend = models.ForeignKey(MLBackend,
+                                   related_name='train_jobs', #方向查询:ml_backend.train_jobs
+                                   on_delete=models.CASCADE) #MLBackend记录被删除时，这条任务记录级联一起删掉
     model_version = models.TextField(
         _('model version'),
         blank=True,
         null=True,
         help_text='Model version this job is associated with',
     )
-    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True) #创建时自动写入一次
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
 
     def get_status(self):

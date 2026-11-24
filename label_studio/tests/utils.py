@@ -47,6 +47,7 @@ def register_ml_backend_mock(
     train_job_id='123',
     setup_model_version='abc',
 ):
+    """挂6个的假响应"""
     m.post(f'{url}/setup', text=json.dumps({'status': 'ok', 'model_version': setup_model_version}))
     if health_connect_timeout:
         m.get(f'{url}/health', exc=requests.exceptions.ConnectTimeout)

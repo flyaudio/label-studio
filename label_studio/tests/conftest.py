@@ -389,7 +389,7 @@ def ml_backend_for_test_predict(ml_backend):
     yield ml_backend
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True) # autouse = 所有测试自动带上，不用在参数里写
 def ml_backend():
     with ml_backend_mock() as m:
         yield m
@@ -398,7 +398,7 @@ def ml_backend():
 @pytest.fixture
 def mock_gethostbyname():
     """ML backend hosts in tests are fake, pin them to a public IP so ML_BLOCK_LOCAL_IP validation passes."""
-    with mock.patch('socket.gethostbyname', return_value='121.21.21.21'):
+    with mock.patch('socket.gethostbyname', return_value='121.21.21.21'): #把 `socket.gethostbyname` 函数临时替换成一个恒返回公网 IP `121.21.21.21` 的假函数
         yield
 
 
@@ -578,7 +578,7 @@ def contextlog_test_config(settings):
 
 
 @pytest.fixture
-def business_client(client):
+def business_client(client): #django.test.client.Client
     # we work in empty database, so let's create business user and login
     client = deepcopy(client)
     email = 'business@pytest.net'
