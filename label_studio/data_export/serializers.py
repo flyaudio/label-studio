@@ -57,6 +57,36 @@ class AnnotationSerializer(FlexFieldsModelSerializer):
         return obj.result
 
 
+"""
+[
+  {
+    "id": 101,
+    "data": {
+      "image": "http://labelstudio.local/data/upload/1/my_cat.jpg" 
+      // OR an S3/GCS URI: "s3://my-bucket/images/my_cat.jpg"
+    },
+    "annotations": [
+      {
+        "id": 1,
+        "result": [
+          {
+            "from_name": "label",
+            "to_name": "image",
+            "type": "rectanglelabels",
+            "value": {
+              "x": 20.5,
+              "y": 15.0,
+              "width": 30.0,
+              "height": 40.0,
+              "rectanglelabels": ["Cat"]
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
+"""
 class BaseExportDataSerializer(FlexFieldsModelSerializer):
     annotations = AnnotationSerializer(many=True, read_only=True)
     file_upload = serializers.ReadOnlyField(source='file_upload_name')

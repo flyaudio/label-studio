@@ -9,6 +9,10 @@ app_name = 'ml'
 # ML backend CRUD
 _api_urlpatterns = [
     # All ml backends
+    """
+    GET request: List all items (returns a JSON array of items),e.g /api/ml/?project=123&is_interactive=true
+    POST request: Create a new item (receives JSON and saves a new record to the database).   
+    """
     path('', api.MLBackendListAPI.as_view(), name='ml-list'),
     path('<int:pk>', api.MLBackendDetailAPI.as_view(), name='ml-detail'),
     path('<int:pk>/train', api.MLBackendTrainAPI.as_view(), name='ml-train'),
@@ -22,5 +26,5 @@ _api_urlpatterns = [
 ]
 
 urlpatterns = [
-    path('api/ml/', include((_api_urlpatterns, app_name), namespace='api')),
+    path('api/ml/', include((_api_urlpatterns, app_name), namespace='api')),# 外层前缀：'api/ml/'
 ]

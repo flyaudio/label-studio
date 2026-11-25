@@ -67,11 +67,26 @@ logger = logging.getLogger(__name__)
     ),
 )
 class MLBackendListAPI(generics.ListCreateAPIView):
+    """
+    When a GET arrives:
+        Calls get_queryset() to fetch objects from the database.
+        Passes them to serializer_class(many=True) to convert database models into JSON.
+        Returns a 200 OK response with the JSON list.
+    When a POST arrives:
+        Calls create():
+        Passes request data to serializer_class(data=request.data) to validate it.
+        If valid, calls perform_create(serializer), which executes serializer.save().
+        Returns a 201 Created response with the created object's JSON.
+    """
+    # What incoming formats are supported (JSON, standard web forms, multipart uploads)
     parser_classes = (JSONParser, FormParser, MultiPartParser)
+
+    # Permission checks: GET requires view permission, POST requires edit/change permission
     permission_required = ViewClassPermission(
         GET=all_permissions.projects_view,
         POST=all_permissions.projects_change,
     )
+    # The serializer that converts MLBackend models to/from JSON and validates fields
     serializer_class = MLBackendSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['is_interactive']
@@ -80,11 +95,15 @@ class MLBackendListAPI(generics.ListCreateAPIView):
         if getattr(self, 'swagger_fake_view', False):
             return MLBackend.objects.none()
 
+        #Read ?project=<id> from the URL query string
         project_pk = self.request.query_params.get('project')
+        # Find the project in the database (or return 404 if not found)
         project = generics.get_object_or_404(Project, pk=project_pk)
-
+        # Check if the current user has permission to view this project
         self.check_object_permissions(self.request, project)
-
+        # Instead of just querying the database, ask the project to refresh
+        # the status of its connected ML backends (check if servers are alive)
+        # and return that list to be serialized into JSON.
         ml_backends = project.update_ml_backends_state()
 
         return ml_backends
@@ -101,7 +120,9 @@ class MLBackendListAPI(generics.ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
+        # Save the new MLBackend record to the database
         ml_backend = serializer.save()
+        # Check the ML server's health/status immediately
         ml_backend.update_state()
 
         project = ml_backend.project
@@ -227,9 +248,27 @@ class MLBackendDetailAPI(generics.RetrieveUpdateDestroyAPIView):
     ),
 )
 class MLBackendTrainAPI(APIView):
+    """
+User clicks "Start Training" in UI
+             │
+             ▼
+POST /api/ml/5/train
+             │
+             ▼
+[MLBackendTrainAPI]
+  ├── 1. Permission check: Can current user edit this project? (403 if not)
+  ├── 2. Lookup check: Does MLBackend #5 exist? (404 if not)
+  ├── 3. Execute ml_backend.train()
+  │       ├── Send /train HTTP request to remote ML container/server
+  │       ├── Update local MLBackend state to 'TRAINING' (or 'ERROR')
+  │       └── Record training job ID in database
+  │
+  └── 4. Return 200 OK immediately (Frontend shows "Training in progress...")
+    """
     permission_required = all_permissions.projects_change
 
     def post(self, request, *args, **kwargs):
+        # extracts pk from the URL and looks up the MLBackend record. If that backend does not exist or was deleted, it immediately returns 404 Not Found.
         ml_backend = generics.get_object_or_404(MLBackend, pk=self.kwargs['pk'])
         self.check_object_permissions(self.request, ml_backend)
 

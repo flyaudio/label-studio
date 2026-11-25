@@ -469,3 +469,171 @@ def test_register_backend_connected(business_client, ml_backend_for_test_api, mo
     project.refresh_from_db()
     # perform_create:112 —— 项目未选模型版本时，新后端 title 成为默认版本
     assert project.model_version == 'yolo-backend'
+
+
+
+"""
+What These Tests Tell You About the Code:
+
+get_queryset is not just a DB query:
+    test_list_requires_project_query_parameter explains why get_object_or_404(Project, pk=project_pk) is needed.
+    test_list_updates_backend_health_state explains why project.update_ml_backends_state() is called instead of MLBackend.objects.filter(...).
+
+create is an authorization shield:
+    test_create_checks_project_permission_before_external_connection demonstrates why create() was overridden to check permissions on request.data.get('project') before delegating to super().create().
+
+perform_create handles post-creation business side-effects:
+    test_perform_create_auto_assigns_default_model_version and test_perform_create_does_not_override_existing_model_version demonstrate the if project.show_collab_predictions and not project.model_version: logic.
+"""
+import pytest
+from unittest.mock import patch, MagicMock
+from rest_framework import status
+from ml.models import MLBackend, MLBackendState
+from projects.models import Project
+
+
+# ==============================================================================
+# 1. GET (List) Business Logic Tests
+# ==============================================================================
+
+@pytest.mark.django_db
+class TestMLBackendListBusinessLogic:
+
+    def test_list_requires_project_query_parameter(self, business_client):
+        """
+        Business Rule: ML backends are always project-scoped.
+        If a user does not supply ?project=<id>, the endpoint must fail with 404.
+        """
+        response = business_client.get('/api/ml/')
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_list_verifies_project_permissions(self, business_client, project_factory, user_factory):
+        """
+        Business Rule: A user cannot see ML backends of a project they cannot view.
+        """
+        other_user = user_factory()
+        private_project = project_factory(created_by=other_user)
+
+        # Attempt to list backends for a project the user doesn't belong to
+        response = business_client.get(f'/api/ml/?project={private_project.id}')
+        assert response.status_code in (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND)
+
+    def test_list_updates_backend_health_state(self, business_client, project_factory):
+        """
+        Business Rule: When fetching the list of ML backends, Label Studio automatically
+        refreshes each backend's health/status (project.update_ml_backends_state()).
+        """
+        project = project_factory(created_by=business_client.user)
+        
+        with patch.object(Project, 'update_ml_backends_state', return_value=[]) as mock_update_state:
+            response = business_client.get(f'/api/ml/?project={project.id}')
+            
+            assert response.status_code == status.HTTP_200_OK
+            # Confirms that calling GET triggers the state refresh method:
+            mock_update_state.assert_called_once()
+
+
+# ==============================================================================
+# 2. POST (Create) Business Logic Tests
+# ==============================================================================
+
+@pytest.mark.django_db
+class TestMLBackendCreateBusinessLogic:
+
+    def test_create_checks_project_permission_before_external_connection(
+        self, business_client, project_factory, user_factory
+    ):
+        """
+        Business Rule (Security):
+        MLBackendSerializer.validate() sends a network ping (/setup) to the external ML URL.
+        To prevent SSRF / token leakage, create() must check project permissions 
+        BEFORE allowing the serializer to initiate any network calls.
+        """
+        other_user = user_factory()
+        private_project = project_factory(created_by=other_user)
+
+        with patch('ml.serializers.MLBackendSerializer.validate') as mock_validate:
+            payload = {
+                'project': private_project.id,
+                'title': 'Attacker Backend',
+                'url': 'http://malicious-external-host.com:9090'
+            }
+            response = business_client.post('/api/ml/', data=payload)
+
+            # Must reject with 403 Forbidden
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            # CRITICAL: Serializer.validate() was never reached or called!
+            mock_validate.assert_not_called()
+
+    def test_perform_create_updates_backend_state(
+        self, business_client, project_factory, mock_ml_backend_setup
+    ):
+        """
+        Business Rule: After a new ML backend is saved, its initial connectivity
+        state must be checked immediately (ml_backend.update_state()).
+        """
+        project = project_factory(created_by=business_client.user)
+
+        with patch.object(MLBackend, 'update_state') as mock_update_state:
+            payload = {
+                'project': project.id,
+                'title': 'Object Detection Model',
+                'url': 'https://ml.example.com'
+            }
+            response = business_client.post('/api/ml/', data=payload)
+
+            assert response.status_code == status.HTTP_201_CREATED
+            # Verifies perform_create called update_state
+            mock_update_state.assert_called_once()
+
+    def test_perform_create_auto_assigns_default_model_version(
+        self, business_client, project_factory, mock_ml_backend_setup
+    ):
+        """
+        Business Rule: If collaborative predictions are enabled (show_collab_predictions=True)
+        and the project does not yet have a default model_version set, the newly added
+        backend's title automatically becomes the project's default model_version.
+        """
+        project = project_factory(
+            created_by=business_client.user,
+            show_collab_predictions=True,
+            model_version=''  # currently unset
+        )
+
+        payload = {
+            'project': project.id,
+            'title': 'yolov8-classifier',
+            'url': 'https://ml.example.com'
+        }
+        response = business_client.post('/api/ml/', data=payload)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        # Refresh project from DB to verify the side effect
+        project.refresh_from_db()
+        assert project.model_version == 'yolov8-classifier'
+
+    def test_perform_create_does_not_override_existing_model_version(
+        self, business_client, project_factory, mock_ml_backend_setup
+    ):
+        """
+        Business Rule: If the project already has an active model_version (e.g. from
+        offline uploaded predictions or a previously attached model), adding a new
+        ML backend must NOT overwrite it.
+        """
+        project = project_factory(
+            created_by=business_client.user,
+            show_collab_predictions=True,
+            model_version='existing-v1-model'  # already set
+        )
+
+        payload = {
+            'project': project.id,
+            'title': 'new-v2-model',
+            'url': 'https://ml.example.com'
+        }
+        response = business_client.post('/api/ml/', data=payload)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        project.refresh_from_db()
+        # Remains the old version, not replaced
+        assert project.model_version == 'existing-v1-model'

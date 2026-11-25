@@ -221,7 +221,7 @@ class MLBackend(models.Model):
         return model_version
 
     def train(self):
-        train_response = self.api.train(self.project)
+        train_response = self.api.train(self.project) # Send /train HTTP request to remote ML container/server
         if train_response.is_error:
             self.state = MLBackendState.ERROR
             self.error_message = train_response.error_message
